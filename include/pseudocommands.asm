@@ -107,6 +107,7 @@ syntax very much resembles standard 6502 instructions.
 .pseudocommand mult16 {
   mult8
   asl
+  asl
 }
 
 /* BRA: branch always */

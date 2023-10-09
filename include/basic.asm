@@ -10,9 +10,12 @@
     .label ERROR        = $a437
     .label CUSTERROR    = $a445
     .label NEWSTT       = $a7ae
+    .label EXECOLD      = $a7ed
+    .label CHAROUT      = $ab47
     .label FRMNUM       = $ad8a
     .label FRMEVL       = $ad9e
     .label EVAL         = $ae83
+    .label FUNCTOLD     = $ae8d
     .label PARCHK       = $aef1
     .label CHKCOM       = $aefd
     .label FACINX       = $b1aa

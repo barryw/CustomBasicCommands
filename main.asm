@@ -7,10 +7,10 @@
 .label PRINT    = $99
 .label QUOTE    = $22
 .label BUFFER   = $200
-.label CHAROUT  = $ab47
-.label EXECOLD  = $a7ed
-.label FUNCTOLD = $ae8d
 
+
+// Set these to the start/end tokens for commands and functions.
+// You can find these at the bottom of this file.
 .label CMDSTART = $cc
 .label CMDEND   = $d1
 .label FUNSTART = $d2
@@ -68,7 +68,7 @@ TestCmd:
     bcc OkNew
 OldCmd:
     jsr zp.CHRGOT
-    jmp EXECOLD
+    jmp basic.EXECOLD
 OkNew:
     sec
     sbc #CMDSTART
@@ -104,7 +104,7 @@ ExecuteFunction:
     bcc Ok1New
 OldFun:
     jsr zp.CHRGOT               // It's a built-in Commodore function, so re-fetch the token
-    jmp FUNCTOLD                // and call the normal BASIC function handler.
+    jmp basic.FUNCTOLD          // and call the normal BASIC function handler.
 Ok1New:
     sec
     sbc #FUNSTART               // We need to get an index to the function in the vector table
@@ -281,10 +281,10 @@ WokeCmd:
 WeekFun:
     jsr basic.GETADR    // Get the WEEK address
 
-    ldy #$01
+    ldy #$00
     lda ($14), y
     sta $62
-    dey
+    iny
     lda ($14), y
     sta $63
 
@@ -322,22 +322,8 @@ ReuFun:
 
 */
 MemCopyCmd:
-    jsr Get16Bit
-    lda $14
-    sta r0L
-    lda $15
-    sta r0H
-
+    jsr MemCommon
     jsr basic.CHKCOM
-
-    jsr Get16Bit
-    lda $14
-    sta r1L
-    lda $15
-    sta r1H
-
-    jsr basic.CHKCOM
-
     jsr Get16Bit
     lda $14
     sta r2L
@@ -355,6 +341,22 @@ MemCopyCmd:
 
 */
 MemFillCmd:
+    jsr MemCommon
+    jsr basic.CHKCOM
+    jsr Get8Bit
+    sty r2L
+
+    jsr MemFill
+
+    rts
+
+/*
+
+    The existing memory routines start with 2 16-bit values and they're written to
+    the same registers.
+
+*/
+MemCommon:
     jsr Get16Bit
     lda $14
     sta r0L
@@ -369,13 +371,6 @@ MemFillCmd:
     lda $15
     sta r1H
 
-    jsr basic.CHKCOM
-
-    jsr Get8Bit
-    sty r2L
-
-    jsr MemFill
-
     rts
 
 /*
@@ -388,6 +383,7 @@ Get16Bit:
     sta zp.VALTYP
     jsr basic.FRMNUM
     jsr basic.GETADR
+
     rts
 
 /*
@@ -401,8 +397,9 @@ Get8Bit:
     cmp #$00
     bne !+              // Nope. Type mismatch
     jsr basic.FACINX    // Convert the value in FAC1 to A(H)&Y(L)
-    cmp #$00
-    bne !++
+    cmp #$00            // Is the high byte 0? (>255)
+    bne !++             // Yup. Illegal quantity
+
     rts
 
 !:
@@ -480,7 +477,7 @@ Found:
     iny
     lda NewTab, y
     bmi OldEnd
-    jsr CHAROUT
+    jsr basic.CHAROUT
     bne Found
 OldEnd:
     jmp $a6ef

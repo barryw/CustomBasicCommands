@@ -14,7 +14,7 @@
 .label CMDSTART = $cc
 .label CMDEND   = $d1
 .label FUNSTART = $d2
-.label FUNEND   = $d3
+.label FUNEND   = $d2
 
 /*
 
@@ -44,7 +44,6 @@ Init:
 
     rts
 
-#import "reu.asm"       // REU functions and commands
 #import "memory.asm"    // Memory commands
 
 /*
@@ -203,7 +202,6 @@ CmdTab:                         // A table of vectors pointing at your commands'
 
 FunTab:                         // A table of vectors pointing at your functions' execution addresses
     .word WeekFun               // Address of first function. Token = FUNSTART
-    .word ReuFun
 
 /*
 
@@ -293,24 +291,6 @@ WeekFun:
     ldx #$90
     sec
     jsr $bc49
-
-    rts
-
-/*
-
-    Detect and return the type of REU attached to the machine, if any.
-
-    Example: PRINT REU(0) returns 0 if no REU is attached
-
-*/
-ReuFun:
-    jsr REUDetect       // Returns the detected REU in A. A value of 0 means no REU was detected.
-    sta $62
-    lda #$00
-    sta $63
-    ldx #$90
-    sec
-    jmp $bc49
 
     rts
 
@@ -418,23 +398,14 @@ Get8Bit:
 
 */
 GetColor:
-    jsr basic.FRMEVL    // Evaluate the expression after the token
-    lda zp.VALTYP       // Is it a number?
-    cmp #$00
-    bne !+              // Nope. Type mismatch
-    jsr basic.FACINX    // Convert the value in FAC1 to A(H)&Y(L)
-    cmp #$00            // Is the high byte empty? If it is, then the value entered is > 255 which is invalid
-    bne !++             // Illegal quantity
+    jsr Get8Bit
     tya
     pha
-    and #$f0            // Strip the lower nybble of the low byte. These are really the only bits we care about
-    cmp #$00            // Is the upper nybble > 0? If so, that means our value is > 15 which is not a valid color
-    bne !++             // Illegal quantity
+    and #$f0            // Strip the lower nybble of the low byte. These are really the only bits we care about.
+    cmp #$00            // Is the upper nybble > 0? If so, that means our value is > 15 which is not a valid color.
+    bne !+              // Illegal quantity
     pla
     rts
-!:
-    ldx #basic.ERROR_TYPE_MISMATCH
-    jmp (vectors.IERROR)
 !:
     lda #<InvalidColorError     // Write out a custom error message
     sta $22
@@ -637,8 +608,6 @@ NewTab:
     .byte 'L' + $80
     .text "WEE"         // $d2
     .byte 'K' + $80
-    .text "RE"          // $d3
-    .byte 'U' + $80
     .byte 0
 
 /*

@@ -65,8 +65,23 @@ There are 4 hooks currently implemented:
 - `IGONE` - This is what BASIC calls when it's found a command token and needs to call its execution routine. This is directed to the `ExecuteCommand` routine which has a lookup table to decide, based on the token, which routine to call.
 - `IEVAL` - When BASIC finds a function, it calls this to execute the function's routine. We use the routine `ExecuteFunction` to handle that which also has a lookup table to determine which routine goes with which function.
 
-The `CmdTab` and `FunTab` labels point at the lookup tables for commands and functions and they **must** be in token number order.
+You shouldn't have to modify any of the hooks unless you want to do something different. If you just want to add commands and functions, follow these steps:
 
-The `NewTab` label points at your command/function string table which defines the commands and functions. Each must have the high bit of the last character in its string set. Token numbers for this table start at $cc and you must keep your functions and commands grouped together with commands coming first.
+- Modify the table located at the `NewTab` label. These are the strings for your new commands/functions. Each must have the high bit of the last character in its string set. Token numbers for this table start at $cc and you must keep your functions and commands grouped together with commands coming first. You can add commands up to $fe ($ff is pi)
 
-In order to identify the start/end token for commands, set `CMDSTART`, `CMDEND`, `FUNSTART` and `FUNEND`
+- In order to identify the start/end token for commands, set `CMDSTART`, `CMDEND`, and for functions set `FUNSTART` and `FUNEND` at the top of the file.
+
+- Modify the tables located at the `CmdTab` and `FunTab` labels to point at your new commands and functions. They **must** be in token number order. For commands, the address must be the execution address -1. For functions, it's the actual address.
+
+- Add your new command/function execution routines and make sure your functions return their value in FAC1. Look at the existing examples to see how things are done.
+
+There are a bunch of labels defined for BASIC, the Kernal, the VIC and ZP, so feel free to use them instead of hardcoding addresses & values. For the most part these labels come from **Mapping the Commodore 64** from Compute!. It's a must-have when you're writing assembly on the 64.
+
+
+### Future enhancements
+
+I have some thoughts on things I'd like to add. Here are just some examples:
+
+- The Commodore 128 has commands built in to directly deal with an REU: `STASH`, `FETCH` and `SWAP`. I'm thinking that with the general availability of expansions for the 64 (a setting in VICE, Ultimate II+/Ultimate 64), it would give BASIC programmers a way to have more memory available. It probably wouldn't work for code, but it would certainly be possible to load graphics/sound data from disk and stuff into the REU. It would also be helpful to have an `REU` function which auto-detects which, if any REU was connected.
+- Commands to load data from disk into the REU.
+- Commands to interface with modern hardware, like WiFi modems. 

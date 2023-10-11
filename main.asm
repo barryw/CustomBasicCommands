@@ -12,9 +12,9 @@
 // Set these to the start/end tokens for commands and functions.
 // You can find these at the bottom of this file.
 .label CMDSTART = $cc
-.label CMDEND   = $d1
-.label FUNSTART = $d2
-.label FUNEND   = $d2
+.label CMDEND   = $d3
+.label FUNSTART = CMDEND + $01
+.label FUNEND   = $d5
 
 /*
 
@@ -119,8 +119,6 @@ Ok1New:
     sta zp.JMPER + 2
     jsr zp.JMPER                // ... and then call it.
     rts
-    // jmp basic.FRMNUM            // Make sure the function returns a number. If your function does NOT return
-    //                             // a number, then you may need to change/remove this.
 
 /*
 
@@ -199,9 +197,12 @@ CmdTab:                         // A table of vectors pointing at your commands'
     .word ClsCmd - 1
     .word MemCopyCmd - 1
     .word MemFillCmd - 1
+    .word ScreenCmd - 1
+    .word BankCmd - 1
 
 FunTab:                         // A table of vectors pointing at your functions' execution addresses
     .word WeekFun               // Address of first function. Token = FUNSTART
+    .word ScrLocFun
 
 /*
 
@@ -246,10 +247,7 @@ BackgroundCmd:
 
 */
 WokeCmd:
-    lda #$00
-    sta zp.VALTYP
-    jsr basic.FRMNUM    // Get the address to WOKE to
-    jsr basic.GETADR
+    jsr Get16Bit        // Get the address to WOKE to
     lda $14
     sta $57
     lda $15
@@ -257,10 +255,9 @@ WokeCmd:
 
     jsr basic.CHKCOM    // Make sure we have a comma
 
-    jsr basic.FRMNUM    // Get the word value to WOKE
-    jsr basic.GETADR
+    jsr Get16Bit        // Get the 16-bit word to WOKE
 
-    ldy #$00
+    ldy #$00            // WOKE IT!
     lda $14
     sta ($57), y
     lda $15
@@ -268,6 +265,94 @@ WokeCmd:
     sta ($57), y
 
     rts
+
+/*
+
+    Select the VIC bank
+
+    Example: BANK 0 would specify 0-16384 as the range of locations that the VIC sees
+
+*/
+BankCmd:
+    jsr Get8Bit         // Get the bank #
+    tya
+    pha
+    and #$fc            // Strip the bottom 2 bits.
+    cmp #$00            // Is the value > 0? That means we specified a number > 3
+    bne !+              // Illegal quantity
+    pla
+    sta r0L
+    lda #$03            // The bit patterns are backwards. 11 means bank 0 and 00 means bank 3
+    sec
+    sbc r0L
+    sta r0H
+    lda $dd00           // Read the existing value from $dd00
+    and #$fc            // Set just the bank selection bits (0 & 1)
+    ora r0H
+    sta $dd00
+    rts
+!:
+    ldx #basic.ERROR_ILLEGAL_QUANTITY
+    jmp (vectors.IERROR)
+
+/*
+
+    Get the current VIC bank 0-3
+
+*/
+CurrentBank:
+    lda $dd00
+    and #$03
+    sta r0L
+    lda #$03
+    sec
+    sbc r0L
+
+    rts
+
+/*
+
+    Set the screen location within the current VIC bank
+
+    Example: SCREEN 1 would set the screen location to offset $0400 of the current VIC bank.
+    If in bank 0, this would be $0400 since bank 0 starts at $0000. This is also the default
+    at startup.
+
+*/
+ScreenCmd:
+    jsr CurrentBank     // Get the current VIC bank
+    sta r0L
+    jsr Get8Bit         // Get the screen number (0-15)
+    tya
+    pha
+    and #$f0            // Strip the bottom 4 bits
+    cmp #$00            // Is the value > 0? Means we've specified a number > 15
+    bne !+              // Illegal quantity
+    pla
+    tay
+    sty r0H             // Tuck away the screen number (0-15)
+    lda $d018           // Set the screen number in $d018
+    and #$0f
+    ora ScreenLoc, y
+    sta $d018
+    lda r0H             // Now let BASIC know where that screen is
+    asl                 // Multiply by 4
+    asl
+    sta r0H
+    lda r0L
+    asl
+    asl
+    asl
+    asl
+    asl
+    asl
+    ora r0H
+    sta $288
+    rts
+
+!:
+    ldx #basic.ERROR_ILLEGAL_QUANTITY
+    jmp (vectors.IERROR)
 
 /*
 
@@ -290,9 +375,23 @@ WeekFun:
     // https://c64os.com/post/floatingpointmath
     ldx #$90
     sec
-    jsr $bc49
+    jmp $bc49
 
-    rts
+/*
+
+    Return the start address of the current screen.
+
+    Example: PRINT SCRLOC(0). In the default C64 configuration, this would return 1024.
+
+*/
+ScrLocFun:
+    lda $288
+    sta $62
+    lda #$00
+    sta $63
+    ldx #$90
+    sec
+    jmp $bc49
 
 /*
 
@@ -363,7 +462,6 @@ Get16Bit:
     sta zp.VALTYP
     jsr basic.FRMNUM
     jsr basic.GETADR
-
     rts
 
 /*
@@ -606,8 +704,14 @@ NewTab:
     .byte 'Y' + $80
     .text "MEMFIL"      // $d1
     .byte 'L' + $80
-    .text "WEE"         // $d2
+    .text "SCREE"       // $d2
+    .byte 'N' + $80
+    .text "BAN"         // $d3
     .byte 'K' + $80
+    .text "WEE"         // $d4
+    .byte 'K' + $80
+    .text "SCRLO"       // $d5
+    .byte 'C' + $80
     .byte 0
 
 /*
@@ -619,3 +723,9 @@ NewTab:
 InvalidColorError:
     .text "INVALID COLO"
     .byte 'R' + $80
+
+// These are bit patterns that we poke into $d018 to set the screen location. We only care about
+// bits 4-7 since bit 0 is unused and bits 1-3 select the char rom location within the VIC bank.
+ScreenLoc:
+    .byte %00000000, %00010000, %00100000, %00110000, %01000000, %01010000, %01100000, %01110000
+    .byte %10000000, %10010000, %10100000, %10110000, %11000000, %11010000, %11100000, %11110000

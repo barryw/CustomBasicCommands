@@ -12,9 +12,9 @@
 // Set these to the start/end tokens for commands and functions.
 // You can find these at the bottom of this file.
 .label CMDSTART = $cc
-.label CMDEND   = $d3
+.label CMDEND   = $d5
 .label FUNSTART = CMDEND + $01
-.label FUNEND   = $d5
+.label FUNEND   = $d8
 
 /*
 
@@ -45,6 +45,7 @@ Init:
     rts
 
 #import "memory.asm"    // Memory commands
+#import "reu.asm"       // REU functions/commands
 
 /*
 
@@ -199,10 +200,13 @@ CmdTab:                         // A table of vectors pointing at your commands'
     .word MemFillCmd - 1
     .word ScreenCmd - 1
     .word BankCmd - 1
+    .word StashCmd - 1
+    .word FetchCmd - 1
 
 FunTab:                         // A table of vectors pointing at your functions' execution addresses
     .word WeekFun               // Address of first function. Token = FUNSTART
     .word ScrLocFun
+    .word ReuFun
 
 /*
 
@@ -268,7 +272,7 @@ WokeCmd:
 
 /*
 
-    Select the VIC bank
+    Select the VIC bank (0-3)
 
     Example: BANK 0 would specify 0-16384 as the range of locations that the VIC sees
 
@@ -395,6 +399,48 @@ ScrLocFun:
 
 /*
 
+    Check to see if there's a REU attached
+
+    TODO: The reudetect routine is completely broken and needs a lot of work
+
+*/
+ReuFun:
+    jsr reudetect
+    lda #$00
+    sta $62
+    sta $63
+    ldx #$90
+    sec
+    jmp $bc49
+
+/*
+
+    Store data from the C64's memory into an REU
+
+    Example: STASH $400, $0, 1000, 0 would store the default screen to the REU at address $0, bank $0
+
+*/
+StashCmd:
+    jsr ReuCommandCommon
+    jsr REUStash
+
+    rts
+
+/*
+
+    Retrieve data from the REU and store it in the C64's memory
+
+    Example: FETCH $400, $0, 1000, 0 would retrieve 1000 bytes from the REU starting at address $0, bank $0 and store it to the default screen
+
+*/
+FetchCmd:
+    jsr ReuCommandCommon
+    jsr REUFetch
+
+    rts
+
+/*
+
     Copy a block of memory.
 
     Example: MEMCOPY $a000, $a000, $2000 would copy BASIC from ROM to RAM
@@ -426,6 +472,25 @@ MemFillCmd:
     sty r2L
 
     jsr MemFill
+
+    rts
+
+/*
+
+    Set up parameters for STASH and FETCH since they're pretty much identical
+
+*/
+ReuCommandCommon:
+    jsr MemCommon
+    jsr basic.CHKCOM
+    jsr Get16Bit        // Transfer length
+    lda $14
+    sta r2L
+    lda $15
+    sta r2H
+    jsr basic.CHKCOM
+    jsr Get8Bit         // REU bank number
+    sty r3L
 
     rts
 
@@ -708,10 +773,16 @@ NewTab:
     .byte 'N' + $80
     .text "BAN"         // $d3
     .byte 'K' + $80
-    .text "WEE"         // $d4
+    .text "STAS"        // $d4
+    .byte 'H' + $80
+    .text "FETC"        // $d5
+    .byte 'H' + $80
+    .text "WEE"         // $d6
     .byte 'K' + $80
-    .text "SCRLO"       // $d5
+    .text "SCRLO"       // $d7
     .byte 'C' + $80
+    .text "RE"          // $d8
+    .byte 'U' + $80
     .byte 0
 
 /*
@@ -724,8 +795,17 @@ InvalidColorError:
     .text "INVALID COLO"
     .byte 'R' + $80
 
+NoReuError:
+    .text "NO ATTACHED RE"
+    .byte 'U' + $80
+
+InvalidReuBankError:
+    .text "INVALID REU BAN"
+    .byte 'K' + $80
+
 // These are bit patterns that we poke into $d018 to set the screen location. We only care about
 // bits 4-7 since bit 0 is unused and bits 1-3 select the char rom location within the VIC bank.
+// There's probably a way to do this in code, but this is easier.
 ScreenLoc:
     .byte %00000000, %00010000, %00100000, %00110000, %01000000, %01010000, %01100000, %01110000
     .byte %10000000, %10010000, %10100000, %10110000, %11000000, %11010000, %11100000, %11110000

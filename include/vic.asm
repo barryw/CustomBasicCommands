@@ -18,7 +18,7 @@
   .label SP6Y   = $d00d
   .label SP7X   = $d00e
   .label SP7Y   = $d00f
-  .label MSIGX  = $d010 // MSB of sprite x positions
+  .label MSIGX  = $d010 // MSB of sprite x positions. 1 bit per sprite
   .label SCROLY = $d011
   .label RASTER = $d012
   .label LPENX  = $d013
@@ -50,6 +50,7 @@
   .label SP6COL = $d02d
   .label SP7COL = $d02e
 
+// These are not in the VIC address space. Move them to the CIA namespace?
   .label CLRRAM = $d800
   .label COLCLK = $d81a
   .label TODTN1 = $dc08

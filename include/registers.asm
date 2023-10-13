@@ -1,4 +1,7 @@
 // Pseudo 16-bit registers
+// NOTE: These may or may not be completely safe for BASIC and the Kernal. Let me know if they cause problems.
+// I tried to target casette related addresses, so if they're going to interfere, it's probably going to be
+// with anything using cassette.
 
 .label r0   = $fb
 .label r0L  = $fb

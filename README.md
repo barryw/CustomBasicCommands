@@ -48,11 +48,14 @@ There are now a handful of commands available:
 - `MEMFILL` - No more slow FOR/NEXT loops to POKE values into memory. Example: `MEMFILL $0400, 1000, 32` would clear the default screen.
 - `BANK` - Select the current VIC bank. Must be between 0-3 where 0 starts at $0000 and 3 starts at $c000. This affects all graphics on the machine including screen, chars and sprites
 - `SCREEN` - Select the 1k offset for the current video screen. The default is 1 ($0400) in bank 0. Each bank can hold 16 screens (not all can be used for screen RAM), so the value here has to be between 0 and 15.
+- `STASH` - Copy bytes from the C64 to an attached REU. Example `STASH $0400, $0, 1000, 0` would copy the default screen to REU address $0 in bank $0.
+- `FETCH` - Copy bytes from an attached REU to the C64. Example `FETCH $0400, $0, 1000, 0` would copy bytes from REU address $0, bank $0 to the C64's default screen $0400
 
 As well as a couple of functions:
 
 - `WEEK` - A version of the PEEK function which returns a 16-bit word instead of an 8-bit byte. Example: `PRINT WEEK($61)`
 - `SCRLOC` - Returns the absolute address for the start of screen RAM. At startup `PRINT SCRLOC(0)` would return `1024`. You can use the `BANK` and `SCREEN` commands to relocate the screen.
+- `REU` - Detect the type of attached REU, if any. Currently this is broken and needs some TLC.
 
 In addition to the commands and functions, BASIC will now accept integers as either HEX or binary. So for example: `POKE $0400, $0a` or `POKE $d020, %00001111`. You're not limited to 16-bit values, so `PRINT $d00000` is perfectly valid.
 
@@ -82,6 +85,14 @@ There are a bunch of labels defined for BASIC, the Kernal, the VIC and ZP, so fe
 
 I have some thoughts on things I'd like to add. Here are just some examples:
 
-- The Commodore 128 has commands built in to directly deal with an REU: `STASH`, `FETCH` and `SWAP`. I'm thinking that with the general availability of expansions for the 64 (a setting in VICE, Ultimate II+/Ultimate 64), it would give BASIC programmers a way to have more memory available. It probably wouldn't work for code, but it would certainly be possible to load graphics/sound data from disk and stuff into the REU. It would also be helpful to have an `REU` function which auto-detects which, if any REU was connected.
+- The REU function needs to be made to work. It should return a value for each type of valid REU and 0 if no REU was detected. This would make it easy for a BASIC program to detect whether an REU was attached and behave accordingly.
 - Commands to load data from disk into the REU.
 - Commands to interface with modern hardware, like WiFi modems. 
+
+
+### References
+
+These are the books I used while creating this framework. The tokenization/detokenization routines are copied nearly verbatim from the Advanced Machine Language book.
+
+- [Mapping the Commodore 64](https://archive.org/details/Compute_s_Mapping_the_Commodore_64)
+- [The Advanced Machine Language Book for the Commodore 64](https://archive.org/details/The_Advanced_Machine_Language_Book_for_the_Commodore_64)

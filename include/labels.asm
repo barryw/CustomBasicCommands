@@ -1,9 +1,5 @@
 #importonce
 
-//
-// All of the constants referenced in the rest of the library
-//
-
 // Enable/Disable flags
 .label ENABLE  = $80
 .label DISABLE = $00

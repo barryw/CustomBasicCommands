@@ -98,16 +98,14 @@ syntax very much resembles standard 6502 instructions.
 
 /* MULT8: multiply the accumulator by 8 */
 .pseudocommand mult8 {
-  asl
-  asl
+  mult4
   asl
 }
 
 /* MULT16: multiply the accumulator by 16 */
 .pseudocommand mult16 {
   mult8
-  asl
-  asl
+  mult4
 }
 
 /* BRA: branch always */

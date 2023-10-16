@@ -50,6 +50,11 @@ There are now a handful of commands available:
 - `SCREEN` - Select the 1k offset for the current video screen. The default is 1 ($0400) in bank 0. Each bank can hold 16 screens (not all can be used for screen RAM), so the value here has to be between 0 and 15.
 - `STASH` - Copy bytes from the C64 to an attached REU. Example `STASH $0400, $0, 1000, 0` would copy the default screen to REU address $0 in bank $0.
 - `FETCH` - Copy bytes from an attached REU to the C64. Example `FETCH $0400, $0, 1000, 0` would copy bytes from REU address $0, bank $0 to the C64's default screen $0400
+- `MEMLOAD` - Loads binary data from disk into memory. Example `MEMLOAD "SHAPES.SPR",8,$8000` would load shape data from the file `SHAPES.SPR` to $8000, which is the start of VIC bank 2
+- `MEMSAVE` - Saves binary data from memory to disk. Example `MEMSAVE "@:SHAPES.SPR,P,W",$8000,$8040` would save the 64 bytes between $8000 and $8040 to a file named `SHAPES.SPR`
+- `SPRSET` - Turn sprites on/off as well as set their pointer to their shape data.
+- `SPRPOS` - Set a sprite's X and Y positions. X can be 0 - 511 and Y can be 0 - 255
+- `SPRCOLOR` - Set a sprite's color
 
 As well as a couple of functions:
 
@@ -87,7 +92,8 @@ I have some thoughts on things I'd like to add. Here are just some examples:
 
 - The REU function needs to be made to work. It should return a value for each type of valid REU and 0 if no REU was detected. This would make it easy for a BASIC program to detect whether an REU was attached and behave accordingly.
 - Commands to load data from disk into the REU.
-- Commands to interface with modern hardware, like WiFi modems. 
+- Commands to interface with modern hardware, like WiFi modems.
+- Disk commands like DIRECTORY so that you don't wipe out your work whenever you want to see a disk directory.
 
 
 ### References
@@ -96,3 +102,14 @@ These are the books I used while creating this framework. The tokenization/detok
 
 - [Mapping the Commodore 64](https://archive.org/details/Compute_s_Mapping_the_Commodore_64)
 - [The Advanced Machine Language Book for the Commodore 64](https://archive.org/details/The_Advanced_Machine_Language_Book_for_the_Commodore_64)
+
+
+### License
+
+Copyright 2023 Barry Walker
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

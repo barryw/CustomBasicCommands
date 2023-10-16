@@ -6,23 +6,24 @@
 
 */
 .namespace basic {
-    .label RESLST       = $a09e
-    .label ERROR        = $a437
-    .label CUSTERROR    = $a445
-    .label NEWSTT       = $a7ae
-    .label EXECOLD      = $a7ed
-    .label CHAROUT      = $ab47
-    .label FRMNUM       = $ad8a
-    .label FRMEVL       = $ad9e
-    .label EVAL         = $ae83
-    .label FUNCTOLD     = $ae8d
-    .label PARCHK       = $aef1
-    .label CHKCOM       = $aefd
-    .label FACINX       = $b1aa
-    .label GETBYTC      = $b79b
-    .label GETADR       = $b7f7
-    .label OVERR        = $b97e
-    .label FINLOG       = $bd7e
+    .label RESLST               = $a09e
+    .label ERROR                = $a437
+    .label CUSTERROR            = $a445
+    .label NEWSTT               = $a7ae
+    .label EXECOLD              = $a7ed
+    .label CHAROUT              = $ab47
+    .label FRMNUM               = $ad8a
+    .label FRMEVL               = $ad9e
+    .label EVAL                 = $ae83
+    .label FUNCTOLD             = $ae8d
+    .label PARCHK               = $aef1
+    .label CHKCOM               = $aefd
+    .label FACINX               = $b1aa
+    .label ILLEGAL_QUANTITY     = $b248
+    .label GETBYTC              = $b79b
+    .label GETADR               = $b7f7
+    .label OVERR                = $b97e
+    .label FINLOG               = $bd7e
 
     .label ERROR_TOO_MANY_FILES         = $01
     .label ERROR_FILE_OPEN              = $02

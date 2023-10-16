@@ -10,11 +10,11 @@
 
 
 // Set these to the start/end tokens for commands and functions.
-// You can find these at the bottom of this file.
+// You can find the table of tokens below at NewTab
 .label CMDSTART = $cc
-.label CMDEND   = $d5
+.label CMDEND   = $da
 .label FUNSTART = CMDEND + $01
-.label FUNEND   = $d8
+.label FUNEND   = $dd
 
 /*
 
@@ -46,6 +46,81 @@ Init:
 
 #import "memory.asm"    // Memory commands
 #import "reu.asm"       // REU functions/commands
+#import "sprites.asm"   // Sprite commands and functions
+
+/*
+
+    Add your commands and functions here. The last byte of each command/function name
+    must have $80 added to it. Your commands should come first starting from $cc. You can
+    let the execution routine know how to identify commands and functions above in CMDSTART,
+    CMDEND, FUNSTART, FUNEND. These are the token numbers for each block of commands/functions.
+    Our tokens start at $cc and can go up to $fe ($ff is pi). Both the tokenization and
+    detokenization routines use this table, so adding them here will ensure that BASIC
+    will recognize them as you enter them and will detokenize them when LISTed.
+
+*/
+NewTab:
+    // Commands start here
+    .text "BORDE"       // $cc
+    .byte 'R' + $80
+    .text "BACKGROUN"   // $cd
+    .byte 'D' + $80
+    .text "WOK"         // $ce
+    .byte 'E' + $80
+    .text "CL"          // $cf
+    .byte 'S' + $80
+    .text "MEMCOP"      // $d0
+    .byte 'Y' + $80
+    .text "MEMFIL"      // $d1
+    .byte 'L' + $80
+    .text "SCREE"       // $d2
+    .byte 'N' + $80
+    .text "BAN"         // $d3
+    .byte 'K' + $80
+    .text "STAS"        // $d4
+    .byte 'H' + $80
+    .text "FETC"        // $d5
+    .byte 'H' + $80
+    .text "SPRSE"       // $d6
+    .byte 'T' + $80
+    .text "SPRPO"       // $d7
+    .byte 'S' + $80
+    .text "SPRCOLO"     // $d8
+    .byte 'R' + $80
+    .text "MEMLOA"      // $d9
+    .byte 'D' + $80
+    .text "MEMSAV"      // $da
+    .byte 'E' + $80
+    // Functions start here
+    .text "WEE"         // $db
+    .byte 'K' + $80
+    .text "SCRLO"       // $dc
+    .byte 'C' + $80
+    .text "RE"          // $dd
+    .byte 'U' + $80
+    .byte 0
+
+CmdTab:                         // A table of vectors pointing at your commands' execution addresses
+    .word BorderCmd - 1         // Address - 1 of first command. Token = CMDSTART
+    .word BackgroundCmd - 1
+    .word WokeCmd - 1
+    .word ClsCmd - 1
+    .word MemCopyCmd - 1
+    .word MemFillCmd - 1
+    .word ScreenCmd - 1
+    .word BankCmd - 1
+    .word StashCmd - 1
+    .word FetchCmd - 1
+    .word SpriteSetCmd - 1
+    .word SpritePosCmd - 1
+    .word SpriteColorCmd - 1
+    .word MemLoadCmd - 1
+    .word MemSaveCmd - 1
+
+FunTab:                         // A table of vectors pointing at your functions' execution addresses
+    .word WeekFun               // Address of first function. Token = FUNSTART
+    .word ScrLocFun
+    .word ReuFun
 
 /*
 
@@ -191,23 +266,6 @@ ClearFAC:
     bpl !-
     rts
 
-CmdTab:                         // A table of vectors pointing at your commands' execution addresses
-    .word BorderCmd - 1         // Address - 1 of first command. Token = CMDSTART
-    .word BackgroundCmd - 1
-    .word WokeCmd - 1
-    .word ClsCmd - 1
-    .word MemCopyCmd - 1
-    .word MemFillCmd - 1
-    .word ScreenCmd - 1
-    .word BankCmd - 1
-    .word StashCmd - 1
-    .word FetchCmd - 1
-
-FunTab:                         // A table of vectors pointing at your functions' execution addresses
-    .word WeekFun               // Address of first function. Token = FUNSTART
-    .word ScrLocFun
-    .word ReuFun
-
 /*
 
     Clear the screen using PETSCII $93. Easy peasey.
@@ -296,8 +354,7 @@ BankCmd:
     sta $dd00
     rts
 !:
-    ldx #basic.ERROR_ILLEGAL_QUANTITY
-    jmp (vectors.IERROR)
+    jmp basic.ILLEGAL_QUANTITY
 
 /*
 
@@ -355,8 +412,206 @@ ScreenCmd:
     rts
 
 !:
-    ldx #basic.ERROR_ILLEGAL_QUANTITY
-    jmp (vectors.IERROR)
+    jmp basic.ILLEGAL_QUANTITY
+
+SpriteDiskCommandCommon:
+    pha
+    jsr $ad9e           // TODO: Add this to the basic.asm
+    jsr $b6a3           // TODO: Add this to the basic.asm
+    sta r0L             // Filename length
+    lda $22
+    sta r1L             // Filename
+    lda $23
+    sta r1H
+    jsr basic.CHKCOM
+    jsr Get8Bit
+    sty r0H             // Device number
+    jsr basic.CHKCOM
+    jsr Get16Bit
+    lda $14
+    sta r2L             // Load/Save address
+    lda $15
+    sta r2H
+    pla
+    beq !+              // If this is a save, we need to fetch the end address
+    jsr basic.CHKCOM
+    jsr Get16Bit
+    lda $14
+    sta r3L             // Number of bytes to save
+    lda $15
+    sta r3H
+!:
+    lda r0L
+    ldx r1L
+    ldy r1H
+    jsr kernal.VEC_SETNAM
+
+    lda #$02
+    ldx r0H
+    ldy #$02
+    jsr kernal.VEC_SETLFS
+    jsr kernal.VEC_OPEN
+    bcs !+
+    ldx #$02
+    ldy #$00
+    rts
+!:
+    lda #<DiskError
+    sta $22
+    lda #>DiskError
+    jsr basic.CUSTERROR
+
+DiskClose:
+    lda #$02
+    jsr kernal.VEC_CLOSE
+    jsr kernal.VEC_CLRCHN
+    rts
+
+/*
+
+    Load bytes from disk directly into memory.
+
+    Example: MEMLOAD "SPRITES.SPR", 8, $2000 would load the file SPRITES.SPR from device 8 into memory at $2000
+
+*/
+MemLoadCmd:
+    lda #$00
+    jsr SpriteDiskCommandCommon
+    jsr kernal.VEC_CHKIN
+!: // LOOP
+    jsr kernal.VEC_READST
+    bne !++ // EOF
+    jsr kernal.VEC_CHRIN
+    bcs !--
+    sta (r2), y
+    inc r2L
+    bne !+ // SKIP2
+    inc r2H
+!: // SKIP2
+    jmp !-- // LOOP
+!: // EOF
+    ora #$40
+    cmp #$40
+    bne !----
+!: // CLOSE
+    jmp DiskClose
+
+/*
+
+    Save memory to disk.
+
+    Example: MEMSAVE "@:SPRITES.SPR,P,W", 8, $2000, $2040 would save memory from $2000 - $2040 to the file SPRITES.SPR on device 8.
+
+*/
+MemSaveCmd:
+    lda #$80
+    jsr SpriteDiskCommandCommon
+    jsr kernal.VEC_CHKOUT
+!: // LOOP
+    jsr kernal.VEC_READST
+    bne !------ // WERROR
+    lda (r2), y
+    jsr kernal.VEC_CHROUT
+    bcs !------
+    inc r2L
+    bne !+ // SKIP
+    inc r2H
+!: // SKIP
+    lda r2L
+    cmp r3L
+    lda r2H
+    sbc r3H
+    bcc !-- // LOOP
+!: // CLOSE
+    jmp DiskClose
+
+/*
+
+    Grab the sprite number as the first argument for the sprite commands. Stores in r0L
+
+*/
+SpriteCommon:
+    jsr Get8Bit         // Get the sprite number (0-7)
+    cpy #$08
+    bcs !+
+    sty r0L             // Sprite #
+    rts
+!:
+    jmp basic.ILLEGAL_QUANTITY
+
+/*
+
+    Set a sprite's color
+
+*/
+SpriteColorCmd:
+    jsr SpriteCommon
+    jsr basic.CHKCOM
+    jsr GetColor
+    ldy r0L
+    sta vic.SP0COL, y
+    rts
+!:
+    jmp basic.ILLEGAL_QUANTITY
+
+/*
+
+    Set a sprite's X and Y position
+
+*/
+SpritePosCmd:
+    jsr SpriteCommon
+    jsr basic.CHKCOM
+    jsr Get16Bit
+    lda $14
+    sta r1L             // X
+    lda $15
+    sta r1H
+    jsr basic.CHKCOM
+    jsr Get8Bit
+    sty r2L             // Y
+    jsr PositionSprite
+    rts
+
+!:
+    jmp basic.ILLEGAL_QUANTITY
+
+/*
+
+    Turn a sprite on or off and set its shape data location
+
+*/
+SpriteSetCmd:
+    jsr SpriteCommon
+    jsr basic.CHKCOM
+    jsr Get8Bit
+    cpy #$02
+    bcs !+
+    tya
+    ror
+    ror
+    sta r1L             // On/Off
+    jsr basic.CHKCOM
+    jsr Get8Bit
+    sty r3L             // Pointer to shape data in the current bank
+    lda #SPR_VISIBLE
+    sta r0H
+    jsr ChangeSpriteAttribute
+    lda $288            // Get the page number of the current screen
+    clc
+    adc #$03            // Add 1016 to the start of screen RAM to get the sprite pointers
+    sta r0H
+    lda #$00
+    clc
+    adc #$f8
+    sta r0L
+    ldy #$00
+    lda r3L
+    sta (r0), y         // Write the pointer to the sprite data
+
+    rts
+!:
+    jmp basic.ILLEGAL_QUANTITY
 
 /*
 
@@ -370,10 +625,10 @@ WeekFun:
 
     ldy #$00
     lda ($14), y
-    sta $62
+    sta $63
     iny
     lda ($14), y
-    sta $63
+    sta $62
 
     // Thanks to Gregory Naçu for this trick. It allows writing a uint16 to the FAC
     // https://c64os.com/post/floatingpointmath
@@ -536,22 +791,13 @@ Get16Bit:
 */
 Get8Bit:
     jsr basic.FRMEVL    // Evaluate the expression after the token
-    lda zp.VALTYP       // Is it a number?
-    cmp #$00
-    bne !+              // Nope. Type mismatch
+    jsr $ad8d
     jsr basic.FACINX    // Convert the value in FAC1 to A(H)&Y(L)
     cmp #$00            // Is the high byte 0? (>255)
-    bne !++             // Yup. Illegal quantity
-
+    bne !+              // Yup. Illegal quantity
     rts
-
 !:
-    ldx #basic.ERROR_TYPE_MISMATCH
-    jmp (vectors.IERROR)
-
-!:
-    ldx #basic.ERROR_ILLEGAL_QUANTITY
-    jmp (vectors.IERROR)
+    jmp basic.ILLEGAL_QUANTITY
 
 /*
 
@@ -562,12 +808,9 @@ Get8Bit:
 */
 GetColor:
     jsr Get8Bit
+    cpy #$10
+    bcs !+
     tya
-    pha
-    and #$f0            // Strip the lower nybble of the low byte. These are really the only bits we care about.
-    cmp #$00            // Is the upper nybble > 0? If so, that means our value is > 15 which is not a valid color.
-    bne !+              // Illegal quantity
-    pla
     rts
 !:
     lda #<InvalidColorError     // Write out a custom error message
@@ -747,46 +990,6 @@ Cont1:
 
 /*
 
-    Add your commands and functions here. The last byte of each command/function name
-    must have $80 added to it. Your commands should come first starting from $cc. You can
-    let the execution routine know how to identify commands and functions above in CMDSTART,
-    CMDEND, FUNSTART, FUNEND. These are the token numbers for each block of commands/functions.
-    Our tokens start at $cc and can go up to $fe ($ff is pi). Both the tokenization and
-    detokenization routines use this table, so adding them here will ensure that BASIC
-    will recognize them as you enter them and will detokenize them when LISTed.
-
-*/
-NewTab:
-    .text "BORDE"       // $cc
-    .byte 'R' + $80
-    .text "BACKGROUN"   // $cd
-    .byte 'D' + $80
-    .text "WOK"         // $ce
-    .byte 'E' + $80
-    .text "CL"          // $cf
-    .byte 'S' + $80
-    .text "MEMCOP"      // $d0
-    .byte 'Y' + $80
-    .text "MEMFIL"      // $d1
-    .byte 'L' + $80
-    .text "SCREE"       // $d2
-    .byte 'N' + $80
-    .text "BAN"         // $d3
-    .byte 'K' + $80
-    .text "STAS"        // $d4
-    .byte 'H' + $80
-    .text "FETC"        // $d5
-    .byte 'H' + $80
-    .text "WEE"         // $d6
-    .byte 'K' + $80
-    .text "SCRLO"       // $d7
-    .byte 'C' + $80
-    .text "RE"          // $d8
-    .byte 'U' + $80
-    .byte 0
-
-/*
-
     You can create your own custom error messages as well. Set $22 to the LB of the error message
     and A with the HB of the error message and then call basic.CUSTERROR
 
@@ -802,6 +1005,10 @@ NoReuError:
 InvalidReuBankError:
     .text "INVALID REU BAN"
     .byte 'K' + $80
+
+DiskError:
+    .text "DISK I/"
+    .byte 'O' + $80
 
 // These are bit patterns that we poke into $d018 to set the screen location. We only care about
 // bits 4-7 since bit 0 is unused and bits 1-3 select the char rom location within the VIC bank.

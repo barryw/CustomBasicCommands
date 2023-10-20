@@ -12,9 +12,9 @@
 // Set these to the start/end tokens for commands and functions.
 // You can find the table of tokens below at NewTab
 .label CMDSTART = $cc
-.label CMDEND   = $da
+.label CMDEND   = $db
 .label FUNSTART = CMDEND + $01
-.label FUNEND   = $dd
+.label FUNEND   = $de
 
 /*
 
@@ -91,12 +91,14 @@ NewTab:
     .byte 'D' + $80
     .text "MEMSAV"      // $da
     .byte 'E' + $80
+    .text "DI"          // $db
+    .byte 'R' + $80
     // Functions start here
-    .text "WEE"         // $db
+    .text "WEE"         // $dc
     .byte 'K' + $80
-    .text "SCRLO"       // $dc
+    .text "SCRLO"       // $dd
     .byte 'C' + $80
-    .text "RE"          // $dd
+    .text "RE"          // $de
     .byte 'U' + $80
     .byte 0
 
@@ -116,6 +118,7 @@ CmdTab:                         // A table of vectors pointing at your commands'
     .word SpriteColorCmd - 1
     .word MemLoadCmd - 1
     .word MemSaveCmd - 1
+    .word DirectoryCmd - 1
 
 FunTab:                         // A table of vectors pointing at your functions' execution addresses
     .word WeekFun               // Address of first function. Token = FUNSTART
@@ -524,6 +527,57 @@ MemSaveCmd:
     bcc !-- // LOOP
 !: // CLOSE
     jmp DiskClose
+
+/*
+
+    Perform a non-destructive directory listing.
+    Pilfered from https://csdb.dk/forums/?roomid=11&topicid=17487
+
+    Example: DIR 8 would list the directory of device 8
+
+*/
+DirectoryCmd:
+    jsr Get8Bit
+    tya
+    pha
+    lda #$01
+    ldx #<DirectoryChar
+    ldy #>DirectoryChar
+    jsr $ffbd
+    pla
+    sta $ba
+    lda #$60
+    sta $b9
+    jsr $f3d5
+    jsr $f219
+    ldy #$04
+!:
+    jsr $ee13
+    dey
+    bne !-
+    lda $c6
+    ora $90
+    bne !++
+    jsr $ee13
+    tax
+    jsr $ee13
+    jsr $bdcd
+!:
+    jsr $ee13
+    jsr $e716
+    bne !-
+    jsr $aad7
+    ldy #$02
+    bne !--
+!:
+    jsr $f642
+    jsr $f6f3
+!:
+    rts
+
+DirectoryChar:
+    .byte '$'
+    .byte $00
 
 /*
 

@@ -94,7 +94,6 @@ I have some thoughts on things I'd like to add. Here are just some examples:
 - The REU function needs to be made to work. It should return a value for each type of valid REU and 0 if no REU was detected. This would make it easy for a BASIC program to detect whether an REU was attached and behave accordingly.
 - Commands to load data from disk into the REU.
 - Commands to interface with modern hardware, like WiFi modems.
-- Disk commands like DIRECTORY so that you don't wipe out your work whenever you want to see a disk directory.
 
 
 ### References

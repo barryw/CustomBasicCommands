@@ -55,6 +55,7 @@ There are now a handful of commands available:
 - `SPRSET` - Turn sprites on/off as well as set their pointer to their shape data.
 - `SPRPOS` - Set a sprite's X and Y positions. X can be 0 - 511 and Y can be 0 - 255
 - `SPRCOLOR` - Set a sprite's color
+- `DIR` - Display a disk directory listing. Example `DIR 8` would display the disk directory of a disk in device 8.
 
 As well as a couple of functions:
 

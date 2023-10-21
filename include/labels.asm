@@ -1,5 +1,8 @@
 #importonce
 
+// Timers are stored in the tape buffer. Hopefully you're not using tape.
+.label c64lib_timers = kernal.TBUFFER
+
 // Enable/Disable flags
 .label ENABLE  = $80
 .label DISABLE = $00

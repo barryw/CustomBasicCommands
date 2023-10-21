@@ -44,9 +44,10 @@ Init:
 
     rts
 
-#import "memory.asm"    // Memory commands
-#import "reu.asm"       // REU functions/commands
-#import "sprites.asm"   // Sprite commands and functions
+#import "memory.asm"        // Memory commands
+#import "reu.asm"           // REU functions/commands
+#import "sprites.asm"       // Sprite commands and functions
+#import "include/timer.asm" // Timer functions
 
 /*
 
@@ -460,9 +461,8 @@ SpriteDiskCommandCommon:
     rts
 !:
     lda #<DiskError
-    sta $22
-    lda #>DiskError
-    jsr basic.CUSTERROR
+    ldy #>DiskError
+    jmp CustomError
 
 DiskClose:
     lda #$02
@@ -541,9 +541,9 @@ DirectoryCmd:
     tya
     pha
     lda #$01
-    ldx #<DirectoryChar
-    ldy #>DirectoryChar
-    jsr $ffbd
+    tax
+    ldy #$e8
+    jsr kernal.VEC_SETNAM
     pla
     sta $ba
     lda #$60
@@ -574,10 +574,6 @@ DirectoryCmd:
     jsr $f6f3
 !:
     rts
-
-DirectoryChar:
-    .byte '$'
-    .byte $00
 
 /*
 
@@ -612,6 +608,9 @@ SpriteColorCmd:
 
     Set a sprite's X and Y position
 
+    Example: SPRPOS 0, 100, 100 would set sprite 0's X position to 100 and its Y position to 100
+    The x position can be 0-511.
+
 */
 SpritePosCmd:
     jsr SpriteCommon
@@ -633,6 +632,9 @@ SpritePosCmd:
 /*
 
     Turn a sprite on or off and set its shape data location
+
+    Example: SPRSET 0, 1, $0d would turn sprite 0 on and set its shape data pointer to $0d in the current bank,
+    which by default would be location $340 (bank 0 starts at $0 + $40 * $0d)
 
 */
 SpriteSetCmd:
@@ -862,14 +864,23 @@ Get8Bit:
 */
 GetColor:
     jsr Get8Bit
-    cpy #$10
+    cpy #$10            // Is the color > 15?
     bcs !+
     tya
     rts
 !:
-    lda #<InvalidColorError     // Write out a custom error message
+    lda #<InvalidColorError
+    ldy #>InvalidColorError
+    jmp CustomError
+
+/*
+
+    Display a custom error. Pass in the LB of the error message in A and the HB in Y
+
+*/
+CustomError:
     sta $22
-    lda #>InvalidColorError
+    tya
     jmp basic.CUSTERROR
 
 /*
